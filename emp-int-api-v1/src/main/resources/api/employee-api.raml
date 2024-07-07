@@ -1,0 +1,53 @@
+#%RAML 1.0
+title: employee-api
+
+types:
+  employeeType: !include datatypes/employeeType.raml
+
+traits:
+  errorTrait: !include traits/errorTrait.raml  
+
+
+/employees:
+  is:
+    - errorTrait
+  post:
+    body:
+      application/json:
+        type: employeeType
+         
+    responses:
+      200:
+        body:
+          application/json:
+            example:
+              {
+                "Response" : "Record added successfully"
+              }
+  get:
+    is:
+      - errorTrait
+    queryParameters:
+      source:
+        type: string
+        required: false
+
+    responses:
+      200:
+        body:
+          application/json:
+            type: employeeType[]
+
+  /{id}:
+    get:
+      is:
+        - errorTrait
+      queryParameters:
+        source:
+          type: string
+          required: false  
+      responses:
+        200:
+          body:
+            application/json:
+              type: employeeType

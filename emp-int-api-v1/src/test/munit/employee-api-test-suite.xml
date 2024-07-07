@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:munit="http://www.mulesoft.org/schema/mule/munit" xmlns:munit-tools="http://www.mulesoft.org/schema/mule/munit-tools"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xsi:schemaLocation="
+		http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+		http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd
+		http://www.mulesoft.org/schema/mule/munit-tools  http://www.mulesoft.org/schema/mule/munit-tools/current/mule-munit-tools.xsd">
+	<munit:config name="employee-api-test-suite.xml" />
+	<munit:test name="get-all-employees-service-test" doc:id="f1d67e06-cfa6-4070-9e26-2124e8158e82" description="Test">
+		<munit:behavior>
+			<munit-tools:mock-when doc:name="Mock when HTTP Request" doc:id="09696170-be7a-4394-bef1-729f05bbf2e8" processor="http:request">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="HTTP_Request_configuration" attributeName="config-ref" />
+					<munit-tools:with-attribute whereValue="/users" attributeName="path" />
+				</munit-tools:with-attributes>
+				<munit-tools:then-return >
+					<munit-tools:payload value="#[MunitTools::getResourceAsString('test-output/get-all-employees-response.json')]" mediaType="application/json" />
+				</munit-tools:then-return>
+			</munit-tools:mock-when>
+		</munit:behavior>
+		<munit:execution >
+			<munit:set-event doc:name="Set Event" doc:id="7ff36f9f-0a1c-448e-a718-d4886c02f24d" >
+				<munit:attributes value='#[{ "queryParams" : {"source": "service"}}]' />
+			</munit:set-event>
+			<flow-ref doc:name="Flow-ref to get:\employees:employee-api-config" doc:id="f82ba195-a894-4713-afef-e240e0c733ea" name="get:\employees:employee-api-config"/>
+		</munit:execution>
+		<munit:validation >
+			<munit-tools:assert-that doc:name="Assert that" doc:id="f4ada48b-7a38-470f-b96a-117d4a55a20e" expression="#[payload]" is="#[MunitTools::notNullValue()]"/>
+		</munit:validation>
+	</munit:test>
+
+	<munit:test name="get-all-employees-db-test" doc:id="62304fdf-609c-473e-a5bc-0ec910205ea6" description="Test">
+		<munit:behavior>
+			<munit-tools:mock-when doc:name="Mock when Database" doc:id="d83070dc-6644-48f8-b29c-d795bd831350" processor="db:select">
+				<munit-tools:with-attributes>
+					<munit-tools:with-attribute whereValue="c2780049-1ab4-430c-b333-782c1339feec" attributeName="doc:id" />
+					<munit-tools:with-attribute whereValue="Database_Config" attributeName="config-ref" />
+				</munit-tools:with-attributes>
+				<munit-tools:then-return>
+					<munit-tools:payload value="#[MunitTools::getResourceAsString('test-output/get-all-employees-response.json')]" mediaType="application/json" />
+				</munit-tools:then-return>
+			</munit-tools:mock-when>
+		</munit:behavior>
+		<munit:execution>
+			<flow-ref doc:name="Flow-ref to get:\employees:employee-api-config" doc:id="f2a8d0e7-5ef3-4853-8e90-adc357848d3f" name="get:\employees:employee-api-config" />
+		</munit:execution>
+		<munit:validation>
+			<munit-tools:assert-that doc:name="Assert that" doc:id="1e775f61-3b9d-4040-b22e-b3894749ea1a" expression="#[payload]" is="#[MunitTools::notNullValue()]" />
+		</munit:validation>
+	</munit:test>
+	
+		<munit:test name="create-employee-with-id-Test" doc:id="53f14689-36fc-4600-a55e-7169406c2775" description="Test">
+		<munit:behavior >
+			<munit-tools:mock-when doc:name="Mock when Database select" doc:id="640d65b3-cfec-4e14-ae0a-070170750471" processor="db:select">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="Database_Config" attributeName="config-ref" />
+					<munit-tools:with-attribute whereValue="dbCheckVar" attributeName="target" />
+				</munit-tools:with-attributes>
+				<munit-tools:then-return >
+					<munit-tools:payload value="#[%dw 2.0&#10;output application/json&#10;---&#10;[[0],[1]]]" mediaType="application/json" />
+					<munit-tools:variables >
+						<munit-tools:variable key="dbCheckVar" value="#[%dw 2.0&#10;output application/json&#10;---&#10;[[0],[1]]]" mediaType="application/json" />
+					</munit-tools:variables>
+				</munit-tools:then-return>
+			</munit-tools:mock-when>
+			<munit-tools:mock-when doc:name="Mock when Database Insert" doc:id="be35b7bf-4ba3-49f1-a25f-3973fc1f0694" processor="db:insert">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="b633c9fd-f943-4987-aa0b-f67520a8dcb6" attributeName="doc:id" />
+					<munit-tools:with-attribute whereValue="Database_Config" attributeName="config-ref" />
+				</munit-tools:with-attributes>
+			</munit-tools:mock-when>
+		</munit:behavior>
+		<munit:execution >
+			<munit:set-event doc:name="Set Event" doc:id="ac7045f6-5460-4d3c-b417-2bf38aa3e8e7" >
+				<munit:payload value="#[MunitTools::getResourceAsString('test-input/employee-payload-with-id.json')]" mediaType="application/json" />
+			</munit:set-event>
+			<flow-ref doc:name="Flow-ref to post:\employees:application\json:employee-api-config" doc:id="6a7ce2d0-61ac-4c50-b21a-e7d7251193c6" name="post:\employees:application\json:employee-api-config"/>
+		</munit:execution>
+		<munit:validation >
+			<munit-tools:assert-equals doc:name="Assert equals" doc:id="9c32a2fe-b183-4cca-a090-53996f8ee82c" actual="#[payload]" expected='#[{&#10;    "Response": "Record with id 22 added successfully "&#10;}]'/>
+		</munit:validation>
+	</munit:test>
+	
+		<munit:test name="create-employee-without-id-Test" doc:id="2482f984-c4c6-4054-a7a6-91b52a2c69fd" description="Test">
+		<munit:behavior >
+			<munit-tools:mock-when doc:name="Mock when DB Select" doc:id="763225f7-587f-4811-aa5d-f8c276093e01" processor="db:select">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="Database_Config" attributeName="config-ref" />
+					<munit-tools:with-attribute whereValue="dbCheckVar" attributeName="target" />
+				</munit-tools:with-attributes>
+				<munit-tools:then-return >
+					<munit-tools:payload value="#[%dw 2.0&#10;output application/json&#10;---&#10;[[0],[1]]]" mediaType="application/json" />
+					<munit-tools:variables >
+						<munit-tools:variable key="dbCheckVar" value="#[%dw 2.0&#10;output application/json&#10;---&#10;[[0],[1]]]" mediaType="application/json" />
+					</munit-tools:variables>
+				</munit-tools:then-return>
+			</munit-tools:mock-when>
+			<munit-tools:mock-when doc:name="Mock when DB Insert" doc:id="75f791e1-324f-45a0-bade-59ff1eedb4d3" processor="db:insert">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="b633c9fd-f943-4987-aa0b-f67520a8dcb6" attributeName="doc:id" />
+					<munit-tools:with-attribute whereValue="Database_Config" attributeName="config-ref" />
+				</munit-tools:with-attributes>
+			</munit-tools:mock-when>
+		</munit:behavior>
+		<munit:execution >
+			<munit:set-event doc:name="Set Event" doc:id="3bd555da-93b2-439c-a3a5-4f026724d307" >
+				<munit:payload value="#[MunitTools::getResourceAsString('test-input/employee-payload-without-id.json')]" mediaType="application/json" />
+			</munit:set-event>
+			<flow-ref doc:name="Flow-ref to post:\employees:application\json:employee-api-config" doc:id="288831b3-7077-42a5-b269-f6bac64ab1f8" name="post:\employees:application\json:employee-api-config"/>
+		</munit:execution>
+		<munit:validation >
+			<munit-tools:assert-equals doc:name="Assert equals" doc:id="cd1d2ae1-7629-4da5-aaf5-3924ec234ab1" actual="#[payload]" expected='#[{&#10;   "Response" : "Record with added successfully "&#10;}]'/>
+		</munit:validation>
+	</munit:test>
+	
+		<munit:test name="create-employee-already-exists-Test" doc:id="c5133788-9789-4f11-ab35-367f9204e744" description="Test">
+		<munit:behavior >
+			<munit-tools:mock-when doc:name="Mock when DB Select" doc:id="d49a8f55-dc07-4efc-a3b6-b83ca324b8a8" processor="db:select ">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="Database_Config" attributeName="config-ref" />
+					<munit-tools:with-attribute whereValue="dbCheckVar" attributeName="target" />
+				</munit-tools:with-attributes>
+				<munit-tools:then-return >
+					<munit-tools:payload value="#[%dw 2.0&#10;output application/json&#10;---&#10;[[0],[1]]]" mediaType="application/json" />
+					<munit-tools:variables >
+						<munit-tools:variable key="dbCheckVar" value="#[%dw 2.0&#10;output application/json&#10;---&#10;[[1],[1]]]" mediaType="application/json" />
+					</munit-tools:variables>
+				</munit-tools:then-return>
+			</munit-tools:mock-when>
+			<munit-tools:spy doc:name="Spy check Existence Subflow" doc:id="f678b2a6-7551-4fd9-bbaa-6f264db1ddd3" processor="flow-ref">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="e216020e-ae22-4cb5-9fae-06d929c5a9a2" attributeName="doc:id" />
+					<munit-tools:with-attribute whereValue="check-record-existence-subflow" attributeName="name" />
+				</munit-tools:with-attributes>
+				<munit-tools:before-call >
+					<logger level="INFO" doc:name="Logger" doc:id="698d165e-6840-4021-afda-543dce93d830" message='#[vars.isRecordExists]'/>
+				</munit-tools:before-call>
+				<munit-tools:after-call >
+					<logger level="INFO" doc:name="Logger" doc:id="197a14d2-20fc-4598-abae-c4fb9929368d" message='#[vars.isRecordExists]'/>
+				</munit-tools:after-call>
+			</munit-tools:spy>
+			<munit-tools:mock-when doc:name="Mock when DB Insert" doc:id="1f9c044e-3bc0-4221-8a4e-034e23b003f4" processor="db:insert">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="b633c9fd-f943-4987-aa0b-f67520a8dcb6" attributeName="doc:id" />
+					<munit-tools:with-attribute whereValue="Database_Config" attributeName="config-ref" />
+				</munit-tools:with-attributes>
+			</munit-tools:mock-when>
+		</munit:behavior>
+		<munit:execution >
+			<munit:set-event doc:name="Set Event" doc:id="c1d8df42-4235-4077-aadf-0f04f19a7c97" >
+				<munit:payload value="#[MunitTools::getResourceAsString('test-input/employee-payload-with-id.json')]" mediaType="application/json" />
+			</munit:set-event>
+			<flow-ref doc:name="Flow-ref to post:\employees:application\json:employee-api-config" doc:id="d0df9f8c-6ff2-4cbf-adef-89435a244517" name="post:\employees:application\json:employee-api-config"/>
+		</munit:execution>
+		<munit:validation >
+			<munit-tools:assert-equals doc:name="Assert equals" doc:id="46ad8ca9-dcac-410d-a308-2e0784413c83" actual="#[payload]" expected='#[{&#10;	Response: "Record already exists in System with Id 22" &#10;}]'/>
+		</munit:validation>
+	</munit:test>
+	<munit:test name="Verify-call-Test" doc:id="2f2b4bf1-c000-445b-b793-d45749ca1561" description="Test">
+		<munit:behavior >
+			<munit-tools:mock-when doc:name="Mock when DB Select" doc:id="8778568e-6c10-455b-beaf-89d19056f1fd" processor="db:select" >
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="Database_Config" attributeName="config-ref" />
+					<munit-tools:with-attribute whereValue="dbCheckVar" attributeName="target" />
+				</munit-tools:with-attributes>
+				<munit-tools:then-return >
+					<munit-tools:payload value="#[%dw 2.0&#10;output application/json&#10;---&#10;[[0],[1]]]" mediaType="application/json" />
+					<munit-tools:variables >
+						<munit-tools:variable key="dbCheckVar" value="#[%dw 2.0&#10;output application/json&#10;---&#10;[[0],[1]]]" mediaType="application/json" />
+					</munit-tools:variables>
+				</munit-tools:then-return>
+			</munit-tools:mock-when>
+			<munit-tools:mock-when doc:name="Mock when DB Insert" doc:id="9fe3cf00-f240-41b2-b2aa-de29550f46dd" processor="db:insert" >
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="b633c9fd-f943-4987-aa0b-f67520a8dcb6" attributeName="doc:id" />
+					<munit-tools:with-attribute whereValue="Database_Config" attributeName="config-ref" />
+				</munit-tools:with-attributes>
+			</munit-tools:mock-when>
+		</munit:behavior>
+		<munit:execution >
+			<munit:set-event doc:name="Set Event" doc:id="80923a54-0e58-42d9-afe8-76bdfc383291">
+				<munit:payload value="#[MunitTools::getResourceAsString('test-input/employee-payload-with-id.json')]" mediaType="application/json" />
+			</munit:set-event>
+			<flow-ref doc:name="Flow-ref to post:\employees:application\json:employee-api-config" doc:id="2d39ef35-810c-489b-afcc-691e73d93955" name="post:\employees:application\json:employee-api-config"/>
+			<munit-tools:verify-call doc:name="Verify call of DB Insert" doc:id="8fff5ce8-9b24-4ac4-93cb-b7e2602eaa6f" processor="db:insert" times="1">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="b633c9fd-f943-4987-aa0b-f67520a8dcb6" attributeName="doc:id" />
+					<munit-tools:with-attribute whereValue="Database_Config" attributeName="config-ref" />
+				</munit-tools:with-attributes>
+			</munit-tools:verify-call>
+		</munit:execution>
+		<munit:validation >
+			<munit-tools:assert doc:name="Assert expression" doc:id="b174589a-8ae7-45b6-b287-f5fb2d1cf2f4" message="Assertion Fail">
+			</munit-tools:assert>
+		</munit:validation>
+	</munit:test>
+
+</mule>

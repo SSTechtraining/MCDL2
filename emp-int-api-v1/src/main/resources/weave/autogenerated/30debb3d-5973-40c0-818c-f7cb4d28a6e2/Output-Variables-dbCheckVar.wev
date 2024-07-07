@@ -1,0 +1,4 @@
+%dw 2.0
+
+type auto_30debb3d_5973_40c0_818c_f7cb4d28a6e2_Output_Variables_dbCheckVar = Array<{|  id: Number,   first_name?: String,   last_name?: String,   email?: String,   mobile_phone?: String,   city?: String,   state?: String,   country?: String,   postal_code?: String,   created_date?: Date|}>
+

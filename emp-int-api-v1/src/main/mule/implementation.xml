@@ -1,0 +1,321 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	
+	<sub-flow name="get-employee-by-id-subflow" doc:id="4c150f2f-098b-439e-9edc-d8f6d5d67356" >
+		<choice doc:name="Choice1" doc:id="759a16fb-8244-4d5f-bbb0-633483c59f41" >
+			<when expression='#[vars.source ~= "service"]' >
+				<try doc:name="Try" doc:id="a07e0231-9a6b-4d3a-a04c-a15291252903" >
+					<until-successful maxRetries="${untilSuccessful.retries}" doc:name="Until Successful" doc:id="5de028d3-de40-4c62-b2a3-a4e1476179c2" millisBetweenRetries="${untilSuccessful.interval}">
+						<http:request method="GET" doc:name="get Employees from Service" doc:id="f75b615e-ae97-48c1-90ad-d16dcec1c806" config-ref="HTTP_Request_configuration" path="/users/{id}">
+					<http:uri-params><![CDATA[#[output application/java
+---
+{
+	"id" : vars.id
+}]]]></http:uri-params>
+				</http:request>
+					</until-successful>
+					<ee:transform doc:name="Transform Message" doc:id="0abfac8a-ddc6-44f0-891a-0f4c67074516">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+import * from dw::core::Strings
+output json
+---
+
+{
+        "id": payload.id,
+      	firstName: substringBefore(payload.name," "),
+		lastName: substringAfter(payload.name," "),
+        "email": payload.email,
+        "city": payload.address.city,
+        "mobile_phone": payload.phone,     
+        "state": "Uttarakand",
+        "country": "India",
+        "postal_code": payload.address.zipcode,
+             
+ 
+    }]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+					<error-handler >
+						<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="70f6156e-d78e-4393-ab69-68a890180d81" type="HTTP:NOT_FOUND">
+							<set-variable value="404" doc:name="set Http Status" doc:id="6f7d0c96-2856-4f5f-9718-27c343dbdf8c" variableName="httpStatus"/>
+							<ee:transform doc:name="Transform Message" doc:id="f26e89a3-c329-4b99-af67-200fb9023022">
+							<ee:message>
+								<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	message: "No Record exists in System with ID "++ if (vars.id != null) (vars.id) else ""
+}]]></ee:set-payload>
+							</ee:message>
+						</ee:transform>
+						</on-error-continue>
+					</error-handler>
+				</try>
+			</when>
+			<when expression='#[vars.source == "database" or isEmpty(vars.source)]' >
+				<until-successful maxRetries="${untilSuccessful.retries}" doc:name="Until Successful" doc:id="320cf53e-1ffb-4a9b-a512-e9cf681c22b1" millisBetweenRetries="${untilSuccessful.interval}">
+					<db:select doc:name="get employees from DB" doc:id="2a2a7303-e806-43a6-affe-a55a12ef902d" config-ref="Database_Config">
+					<db:sql><![CDATA[select * from sales_db.contacts where id = :id]]></db:sql>
+					<db:input-parameters><![CDATA[#[{
+	id: vars.id
+}]]]></db:input-parameters>
+				</db:select>
+				</until-successful>
+				<choice doc:name="Choice" doc:id="20d819fa-f0be-4a76-970f-68b14edb37a7" >
+					<when expression="#[!isEmpty(payload[0].id)]">
+						<ee:transform doc:name="Transform Message" doc:id="bbfc408c-7a01-4d50-a4e2-69e6488e5c38">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+        "id": payload[0].id,
+        "first_name": payload[0].first_name,
+        "last_name": payload[0].last_name,
+        "email": payload[0].email,
+        "city": payload[0].city,
+        "mobile_phone": payload[0].mobile_phone,     
+        "state": payload[0].state,
+        "country": payload[0].country,
+        "postal_code": payload[0].postal_code,
+        "created_date": payload[0].created_date,        
+ 
+    }]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+					</when>
+					<otherwise >
+						<set-variable value="404" doc:name="set Http Status" doc:id="49b8030d-5895-4029-89df-02e0348b8198" variableName="httpStatus"/>
+						<ee:transform doc:name="Transform Message" doc:id="11706413-2ff4-4427-aaf8-5e7663ff340e" >
+							<ee:message >
+								<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	message: "No Record exists in System with Id "++ if(vars.id != null) vars.id else ""
+}]]></ee:set-payload>
+							</ee:message>
+						</ee:transform>
+					</otherwise>
+				</choice>
+			</when>
+			<otherwise >
+				<ee:transform doc:name="Invalid Source1" doc:id="94762fde-7fe1-46f0-9adc-85796ff1c40b" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+"Invalid source - Source should be Database or Service"]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<set-variable value="400" doc:name="Set Variable" doc:id="35792993-edeb-46fb-a52e-c63f6d249c2f" variableName="httpStatus" />
+			</otherwise>
+		</choice>
+	</sub-flow>
+	<sub-flow name="check-record-existence-subflow" doc:id="d01703d9-e26d-448d-bbe8-238671ac1988" >
+		<choice doc:name="Choice" doc:id="f6a55b34-dc07-414e-aba1-fda03dc5813a" >
+			<when expression="#[vars.id != null]">
+				<until-successful maxRetries="${untilSuccessful.retries}" doc:name="Until Successful" doc:id="e87c6882-77b1-4c7e-807c-461d40972e61" millisBetweenRetries="${untilSuccessful.interval}">
+					<db:select doc:name="Select" doc:id="357537c4-1ca3-4438-ab83-f4033af6201f" config-ref="Database_Config" target="dbCheckVar">
+			<db:sql><![CDATA[select count(*) from sales_db.contacts where id = :id]]></db:sql>
+			<db:input-parameters><![CDATA[#[{
+	id: vars.id
+}]]]></db:input-parameters>
+		</db:select>
+				</until-successful>
+				<ee:transform doc:name="isRecordExists" doc:id="68bd5ea8-f445-4756-80fa-19736a62dd81" >
+					<ee:message >
+					</ee:message>
+					<ee:variables >
+						<ee:set-variable variableName="isRecordExists" ><![CDATA[%dw 2.0
+output application/java
+---
+vars.dbCheckVar[0][0] > 0]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+			</when>
+			<otherwise >
+				<set-variable value="#[false]" doc:name="isRecordExists = false" doc:id="05148d06-55c2-4d2d-bf86-9c85157a7e98" variableName="isRecordExists" />
+			</otherwise>
+		</choice>
+	</sub-flow>
+	<sub-flow name="get-all-employees" doc:id="30debb3d-5973-40c0-818c-f7cb4d28a6e2" >
+		<choice doc:name="Choice" doc:id="e309018b-4dd5-4d65-abe5-f4bef6f713ac" >
+			<when expression='#[vars.source ~= "service"]'>
+				<until-successful maxRetries="${untilSuccessful.retries}" doc:name="Until Successful" doc:id="cfa6503e-d056-4fd6-b5f8-67620792fd57" millisBetweenRetries="${untilSuccessful.interval}">
+					<http:request method="GET" doc:name="get Employees from Service" doc:id="c872f12a-d75e-4c2f-b51e-5fb904293120" config-ref="HTTP_Request_configuration" path="/users">
+				</http:request>
+				</until-successful>
+				<ee:transform doc:name="Transform Message" doc:id="8938abf5-005c-4cbe-af8d-49617b043c45" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+import * from dw::core::Strings
+output json
+---
+payload map 
+{
+        "id": $.id,
+      	firstName: substringBefore($.name," "),
+	lastName: substringAfter($.name," "),
+        "email": $.email,
+        "city": $.address.city,
+        "mobile_phone": $.phone,     
+        "state": "Uttarakand",
+        "country": "India",
+        "postal_code": $.address.zipcode,
+             
+ 
+    }]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<when expression='#[vars.source == "database" or isEmpty(vars.source)]'>
+								<db:select doc:name="get employees from DB" doc:id="c2780049-1ab4-430c-b333-782c1339feec" config-ref="Database_Config">
+					<db:sql><![CDATA[select * from sales_db.contacts ]]></db:sql>
+				</db:select>
+				
+				<ee:transform doc:name="Transform Message" doc:id="7ad6e39a-8f04-4256-b4eb-181f974b8c70">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload map 
+{
+        "id": $.id,
+        "first_name": $.first_name,
+        "last_name": $.last_name,
+        "email": $.email,
+        "city": $.city,
+        "mobile_phone": $.mobile_phone,     
+        "state": $.state,
+        "country": $.country,
+        "postal_code": $.postal_code,
+        "created_date": $.created_date,        
+ 
+    }]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+			</when>
+			<otherwise >
+				<ee:transform doc:name="Invalid Source" doc:id="8ad920e3-b81c-407f-a6d5-d11be50ad67b" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+"Invalid source - Source should be Database or Service"]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<set-variable value="400" doc:name="Set Variable" doc:id="623bfd96-9ba6-4a2b-9b06-daa86f335725" variableName="httpStatus"/>
+			</otherwise>
+		</choice>
+	</sub-flow>
+	<sub-flow name="add-employee-flow" doc:id="751957b7-5701-4a29-8c3b-5d18095221a9" >
+		<ee:transform doc:name="Transform Message" doc:id="f89526b3-44fb-4dbc-87a6-4228e812b5a5" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="inputRecord" ><![CDATA[%dw 2.0
+import * from dw::core::Strings
+output json
+---
+{
+	id: payload.id,
+	firstName: payload.firstName,
+	lastName: payload.lastName,
+	email: payload.email,
+	mobilePhone: payload.mobilePhone,
+	city: payload.city,
+	state: payload.state,
+	country: payload.country,
+	postalCode: payload.postalCode,
+	createdDate: now() as String {format : "yyyy-MM-dd hh:mm:ss"},	
+	}]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<set-variable value="#[payload.id]" doc:name="id" doc:id="c775d3a2-b74e-4073-88fb-afa628879b9b" variableName="id"/>
+		<flow-ref doc:name="check-record-existence-subflow" doc:id="e216020e-ae22-4cb5-9fae-06d929c5a9a2" name="check-record-existence-subflow"/>
+		<choice doc:name="Choice" doc:id="a709702e-890f-4bd3-9869-eba0bdd7de04" >
+			<when expression="#[vars.isRecordExists]">
+				<set-variable value="400" doc:name="Set Variable" doc:id="0e3d7491-d4b8-4204-a0f9-edef1cee5077" variableName="httpStatus"/>
+				<ee:transform doc:name="Transform Message" doc:id="ddc65478-4b74-41dd-9356-0102dd5dfea6" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	Response: "Record already exists in System with Id " ++ if(vars.id !=null) vars.id else ""
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<otherwise >
+				<choice doc:name="Choice" doc:id="bcbe09cb-a7d1-4bfa-9dd3-1b2be2f62787" >
+					<when expression="#[!isEmpty(vars.id)]">
+						<until-successful maxRetries="${untilSuccessful.retries}" doc:name="Until Successful" doc:id="23bbca98-d5b7-41fc-8502-9bbfed947105" millisBetweenRetries="${untilSuccessful.interval}">
+							<db:insert doc:name="Insert employee to contacts DB" doc:id="b633c9fd-f943-4987-aa0b-f67520a8dcb6" config-ref="Database_Config">
+							<db:sql><![CDATA[insert into contacts (id,first_name, last_name, email, mobile_phone, city, state, country, postal_code, created_date) values (:id,:firstName,:lastName,:email,:mobilePhone,:city,:state,:country,:postalCode,:createdDate) ]]></db:sql>
+							<db:input-parameters><![CDATA[#[{
+	id: vars.id,
+	firstName: vars.inputRecord.firstName,
+	lastName: vars.inputRecord.lastName,
+	email: vars.inputRecord.email,
+	mobilePhone: payload.mobilePhone,
+	city: vars.inputRecord.city,
+	state: vars.inputRecord.state,
+	country: vars.inputRecord.country,
+	postalCode: vars.inputRecord.postalCode,
+	createdDate: vars.inputRecord.createdDate,
+}]]]></db:input-parameters>
+						</db:insert>
+						</until-successful>
+						<ee:transform doc:name="Transform Message" doc:id="2d873db6-45c4-4344-8fdd-cc898c49f31a" >
+							<ee:message >
+								<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+   "Response" : "Record with id " ++  (if(!isEmpty(vars.id)) vars.id  else " ") ++ " added successfully "
+}]]></ee:set-payload>
+							</ee:message>
+						</ee:transform>
+					</when>
+					<otherwise>
+						<until-successful maxRetries="${untilSuccessful.retries}" doc:name="Until Successful" doc:id="f56d1f4c-69e4-4870-a6a7-9090c004b501" millisBetweenRetries="${untilSuccessful.interval}">
+							<db:insert doc:name="Insert employee to contacts DB" doc:id="923017f1-5128-40c5-b224-ae6cc5e5348b" config-ref="Database_Config">
+			<db:sql><![CDATA[insert into contacts (first_name, last_name, email, mobile_phone, city, state, country, postal_code, created_date) values (:firstName,:lastName,:email,:mobilePhone,:city,:state,:country,:postalCode,:createdDate) ]]></db:sql>
+			<db:input-parameters><![CDATA[#[{
+	firstName: vars.inputRecord.firstName,
+	lastName: vars.inputRecord.lastName,
+	email: vars.inputRecord.email,
+	mobilePhone: vars.inputRecord.mobilePhone,
+	city: vars.inputRecord.city,
+	state: vars.inputRecord.state,
+	country: vars.inputRecord.country,
+	postalCode: vars.inputRecord.postalCode,
+	createdDate: vars.inputRecord.createdDate,
+}]]]></db:input-parameters>
+		</db:insert>
+						</until-successful>
+						<ee:transform doc:name="Transform Message" doc:id="e0be0058-ba35-46ff-a6d6-45c9403f4af4">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+   "Response" : "Record with added successfully "
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+					</otherwise>
+				</choice>
+			</otherwise>
+		</choice>
+	</sub-flow>
+</mule>

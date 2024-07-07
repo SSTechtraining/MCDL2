@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd ">
+ 	<flow name="employee-api-main">
+        <http:listener config-ref="employee-api-httpListenerConfig" path="/api/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers><![CDATA[#[vars.outboundHeaders default {}]]]></http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body><![CDATA[#[payload]]]></http:body>
+                <http:headers><![CDATA[#[vars.outboundHeaders default {}]]]></http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:router config-ref="employee-api-config" />
+        <error-handler ref="global-error-handler">
+        </error-handler>
+    </flow>
+    <flow name="employee-api-console">
+        <http:listener config-ref="employee-api-httpListenerConfig" path="/console/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body>#[payload]</http:body>
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:console config-ref="employee-api-config" />
+        <error-handler>
+            <on-error-propagate type="APIKIT:NOT_FOUND">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Resource not found"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">404</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    <flow name="get:\employees:employee-api-config">
+        <ee:transform doc:name="Transform Message" doc:id="70cec723-0824-479a-8da5-0057bd05d2c2">
+            <ee:message />
+            <ee:variables>
+                <ee:set-variable variableName="source"><![CDATA[attributes.queryParams.source]]></ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <flow-ref doc:name="get All Employees" doc:id="314ef616-ced1-4f40-9b53-841979188ba0" name="get-all-employees" />
+    </flow>
+    <flow name="get:\employees\(id):employee-api-config" doc:id="25786a06-1023-4b7e-8e85-4c985ae0f408">
+        <ee:transform doc:name="Transform Message">
+            <ee:variables>
+				<ee:set-variable variableName="source" ><![CDATA[attributes.queryParams.'source']]></ee:set-variable>
+				<ee:set-variable variableName="id" ><![CDATA[attributes.uriParams.'id']]></ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <flow-ref doc:name="get-employee-subflow" doc:id="039e4c44-e827-4c53-a404-d67b6cc461b3" name="get-employee-by-id-subflow" />
+    </flow>
+    <flow name="post:\employees:application\json:employee-api-config">
+        <ee:transform doc:name="Transform Message" doc:id="4b7b8068-e107-4578-92a1-e212d0a515b1" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="source" ><![CDATA[attributes.queryParams.'source']]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="add-employee-flow" doc:id="9e738ad8-4768-4219-bea0-9796d92f7ea6" name="add-employee-flow" />
+    </flow>
+</mule>

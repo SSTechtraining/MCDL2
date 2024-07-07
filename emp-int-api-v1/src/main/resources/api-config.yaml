@@ -1,0 +1,21 @@
+http:
+  listener:
+    host : "0.0.0.0"
+    port : "8081"
+  
+    
+  request:
+    host: "jsonplaceholder.typicode.com"
+    port: "443"
+    path: "/users"
+    
+db:
+  host: "localhost"
+  port: "3306"
+  user: "root"
+  password: "Srisailam@2024"
+  database: "sales_db"
+      
+untilSuccessful:
+  retries: "2"
+  interval: "10000"
